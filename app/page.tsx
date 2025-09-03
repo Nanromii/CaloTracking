@@ -32,6 +32,7 @@ import {
   Sun,
   Moon,
   Coffee,
+  Search,
 } from "lucide-react"
 import {
   LineChart,
@@ -117,6 +118,99 @@ export default function HealthTracker() {
   const [goalTargetWeight, setGoalTargetWeight] = useState("")
   const [goalType, setGoalType] = useState<"lose" | "gain" | "maintain">("lose")
   const [goalTimeframe, setGoalTimeframe] = useState("")
+
+  const foodDatabase = {
+    // Grains & Starches (per 100g)
+    "cơm trắng": { calories: 130, carbs: 28, protein: 2.7, fat: 0.3 },
+    "cơm gạo lứt": { calories: 111, carbs: 23, protein: 2.6, fat: 0.9 },
+    "bánh mì": { calories: 265, carbs: 49, protein: 9, fat: 3.2 },
+    phở: { calories: 85, carbs: 17, protein: 3, fat: 0.5 },
+    bún: { calories: 109, carbs: 25, protein: 2.2, fat: 0.1 },
+    mì: { calories: 138, carbs: 25, protein: 4.5, fat: 0.9 },
+
+    // Proteins (per 100g)
+    "thịt bò": { calories: 250, carbs: 0, protein: 26, fat: 15 },
+    "thịt heo": { calories: 242, carbs: 0, protein: 27, fat: 14 },
+    "thịt gà": { calories: 165, carbs: 0, protein: 31, fat: 3.6 },
+    cá: { calories: 206, carbs: 0, protein: 22, fat: 12 },
+    tôm: { calories: 99, carbs: 0.2, protein: 24, fat: 0.3 },
+    "trứng gà": { calories: 155, carbs: 1.1, protein: 13, fat: 11 },
+    "đậu hũ": { calories: 76, carbs: 1.9, protein: 8, fat: 4.8 },
+
+    // Vegetables (per 100g)
+    "rau cải": { calories: 13, carbs: 2.2, protein: 1.5, fat: 0.2 },
+    "cà chua": { calories: 18, carbs: 3.9, protein: 0.9, fat: 0.2 },
+    "dưa chuột": { calories: 16, carbs: 4, protein: 0.7, fat: 0.1 },
+    "cà rốt": { calories: 41, carbs: 10, protein: 0.9, fat: 0.2 },
+    "khoai tây": { calories: 77, carbs: 17, protein: 2, fat: 0.1 },
+    "khoai lang": { calories: 86, carbs: 20, protein: 1.6, fat: 0.1 },
+
+    // Fruits (per 100g)
+    chuối: { calories: 89, carbs: 23, protein: 1.1, fat: 0.3 },
+    táo: { calories: 52, carbs: 14, protein: 0.3, fat: 0.2 },
+    cam: { calories: 47, carbs: 12, protein: 0.9, fat: 0.1 },
+    xoài: { calories: 60, carbs: 15, protein: 0.8, fat: 0.4 },
+    nho: { calories: 62, carbs: 16, protein: 0.6, fat: 0.2 },
+    "dưa hấu": { calories: 30, carbs: 8, protein: 0.6, fat: 0.2 },
+
+    // Dairy (per 100g)
+    "sữa tươi": { calories: 42, carbs: 5, protein: 3.4, fat: 1 },
+    "sữa chua": { calories: 59, carbs: 3.6, protein: 10, fat: 0.4 },
+    "phô mai": { calories: 113, carbs: 4, protein: 11, fat: 6 },
+
+    // Nuts & Seeds (per 100g)
+    "đậu phộng": { calories: 567, carbs: 16, protein: 26, fat: 49 },
+    "hạnh nhân": { calories: 579, carbs: 22, protein: 21, fat: 50 },
+    "óc chó": { calories: 654, carbs: 14, protein: 15, fat: 65 },
+  }
+
+  const [foodAnalyzer, setFoodAnalyzer] = useState({
+    foodName: "",
+    weight: "",
+    results: null as any,
+  })
+
+  const searchFood = (query: string) => {
+    const lowerQuery = query.toLowerCase()
+    return Object.keys(foodDatabase)
+      .filter((food) => food.includes(lowerQuery))
+      .slice(0, 5)
+  }
+
+  const analyzeFood = () => {
+    const foodName = foodAnalyzer.foodName.toLowerCase()
+    const weight = Number(foodAnalyzer.weight)
+
+    if (!foodName || !weight || weight <= 0) return
+
+    const foodData = foodDatabase[foodName as keyof typeof foodDatabase]
+    if (!foodData) return
+
+    const multiplier = weight / 100
+    const results = {
+      foodName: foodAnalyzer.foodName,
+      weight: weight,
+      calories: foodData.calories * multiplier,
+      carbs: foodData.carbs * multiplier,
+      protein: foodData.protein * multiplier,
+      fat: foodData.fat * multiplier,
+    }
+
+    setFoodAnalyzer((prev) => ({ ...prev, results }))
+  }
+
+  const addAnalyzedFood = () => {
+    if (!foodAnalyzer.results || !user) return
+
+    const { results } = foodAnalyzer
+    setNewMealName(`${results.foodName} (${results.weight}g)`)
+    setNewCarbs(results.carbs.toFixed(1))
+    setNewProtein(results.protein.toFixed(1))
+    setNewFat(results.fat.toFixed(1))
+
+    // Clear analyzer
+    setFoodAnalyzer({ foodName: "", weight: "", results: null })
+  }
 
   useEffect(() => {
     const savedWeights = localStorage.getItem(`healthTracker_weights_${user?.id}`)
@@ -933,6 +1027,97 @@ export default function HealthTracker() {
 
           {/* Calories Tab */}
           <TabsContent value="calories" className="space-y-6">
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-card-foreground">
+                  <Search className="w-5 h-5 text-accent" />
+                  Phân tích thực phẩm
+                </CardTitle>
+                <CardDescription>Tra cứu thông tin dinh dưỡng của thực phẩm</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="foodName">Tên thực phẩm</Label>
+                    <Input
+                      id="foodName"
+                      placeholder="Ví dụ: cơm trắng, thịt gà..."
+                      value={foodAnalyzer.foodName}
+                      onChange={(e) => setFoodAnalyzer((prev) => ({ ...prev, foodName: e.target.value }))}
+                      className="bg-input border-border"
+                    />
+                    {/* Food suggestions */}
+                    {foodAnalyzer.foodName && (
+                      <div className="space-y-1">
+                        {searchFood(foodAnalyzer.foodName).map((food) => (
+                          <button
+                            key={food}
+                            onClick={() => setFoodAnalyzer((prev) => ({ ...prev, foodName: food }))}
+                            className="block w-full text-left px-3 py-2 text-sm bg-muted hover:bg-muted/80 rounded-md"
+                          >
+                            {food}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="foodWeight">Khối lượng (gram)</Label>
+                    <Input
+                      id="foodWeight"
+                      type="number"
+                      placeholder="100"
+                      value={foodAnalyzer.weight}
+                      onChange={(e) => setFoodAnalyzer((prev) => ({ ...prev, weight: e.target.value }))}
+                      className="bg-input border-border"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  onClick={analyzeFood}
+                  className="w-full bg-accent hover:bg-accent/90"
+                  disabled={!foodAnalyzer.foodName || !foodAnalyzer.weight}
+                >
+                  <Search className="w-4 h-4 mr-2" />
+                  Phân tích thực phẩm
+                </Button>
+
+                {/* Analysis Results */}
+                {foodAnalyzer.results && (
+                  <div className="p-4 bg-muted rounded-lg space-y-3">
+                    <h4 className="font-semibold text-foreground">
+                      Kết quả phân tích: {foodAnalyzer.results.foodName} ({foodAnalyzer.results.weight}g)
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-accent">{foodAnalyzer.results.calories.toFixed(0)}</p>
+                        <p className="text-sm text-muted-foreground">Calo</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-chart-1">{foodAnalyzer.results.carbs.toFixed(1)}g</p>
+                        <p className="text-sm text-muted-foreground">Carbs</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-chart-2">{foodAnalyzer.results.protein.toFixed(1)}g</p>
+                        <p className="text-sm text-muted-foreground">Protein</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-chart-3">{foodAnalyzer.results.fat.toFixed(1)}g</p>
+                        <p className="text-sm text-muted-foreground">Fat</p>
+                      </div>
+                    </div>
+                    {user && (
+                      <Button onClick={addAnalyzedFood} className="w-full bg-primary hover:bg-primary/90">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Thêm vào bữa ăn
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Add Meal Form */}
             <Card className="bg-card border-border">
               <CardHeader>
